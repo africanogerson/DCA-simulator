@@ -10,7 +10,7 @@ from simulation import (
 
 st.set_page_config(page_title="DCA SPY Simulator", layout="wide")
 st.title("DCA SPY Simulator")
-st.caption("Dollar Cost Averaging on SPY across sliding 24-month windows")
+st.caption("Dollar Cost Averaging on SPY across sliding windows")
 
 # ---------------------------------------------------------------------------
 # Sidebar inputs
@@ -41,14 +41,24 @@ with st.sidebar:
         step=1,
     )
 
+    window_years = st.number_input(
+        "Window Size (years)",
+        min_value=1,
+        max_value=10,
+        value=2,
+        step=1,
+    )
+
     if end_year <= start_year:
         st.error("End Year must be greater than Start Year.")
         st.stop()
 
+    n_months = int(window_years) * 12
     n_windows = int(end_year) - int(start_year)
-    monthly_installment = total_aum / 24
+    monthly_installment = total_aum / n_months
     st.info(
-        f"**{n_windows} window{'s' if n_windows != 1 else ''}** | "
+        f"**{n_windows} window{'s' if n_windows != 1 else ''}** · "
+        f"**{n_months} months** | "
         f"Monthly installment: **${monthly_installment:,.0f}**"
     )
 
@@ -58,16 +68,16 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 
 @st.cache_data(show_spinner="Downloading SPY data...")
-def fetch_data(sy: int, ey: int) -> pd.DataFrame:
-    return download_spy_data(sy, ey)
+def fetch_data(sy: int, ey: int, wy: int) -> pd.DataFrame:
+    return download_spy_data(sy, ey, wy)
 
 
-df = fetch_data(int(start_year), int(end_year))
+df = fetch_data(int(start_year), int(end_year), int(window_years))
 
 # ---------------------------------------------------------------------------
 # Simulation
 # ---------------------------------------------------------------------------
-results = run_all_simulations(df, int(start_year), int(end_year), float(total_aum))
+results = run_all_simulations(df, int(start_year), int(end_year), float(total_aum), int(window_years))
 
 if not results:
     st.error("No simulation windows could be computed. Check your year range.")
@@ -186,9 +196,9 @@ fig3.add_hline(
     line_color="black",
 )
 fig3.update_layout(
-    title="Final 24-Month Return by Window Start Year",
+    title=f"Final {n_months}-Month Return by Window Start Year",
     xaxis=dict(title="Start Year", tickmode="linear", dtick=1),
-    yaxis_title="Return at Month 24 (%)",
+    yaxis_title=f"Return at Month {n_months} (%)",
     hovermode="x",
 )
 

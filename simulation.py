@@ -11,16 +11,16 @@ import yfinance as yf
 # Data download
 # ---------------------------------------------------------------------------
 
-def download_spy_data(start_year: int, end_year: int) -> pd.DataFrame:
+def download_spy_data(start_year: int, end_year: int, window_years: int = 2) -> pd.DataFrame:
     """Download SPY OHLCV data for the given year range.
 
-    The end date is set to Dec 31 of end_year+1 so that a 24-month window
-    starting in end_year-1 has data for its final month.
+    The end date is set to Dec 31 of end_year+window_years so that the last
+    window starting in end_year-1 has data for its final month.
     """
     df: pd.DataFrame = yf.download(
         "SPY",
         start=f"{start_year}-01-01",
-        end=f"{end_year + 1}-12-31",
+        end=f"{end_year + window_years}-12-31",
         multi_level_index=False,
         auto_adjust=False,
     )
@@ -106,15 +106,16 @@ class WindowResult:
     final_return_pct: float = 0.0
 
 
-def simulate_window(df: pd.DataFrame, start_year: int, total_aum: float) -> WindowResult:
-    """Run a 24-month DCA simulation starting in January of start_year."""
-    monthly_investment = total_aum / 24
+def simulate_window(df: pd.DataFrame, start_year: int, total_aum: float, window_years: int = 2) -> WindowResult:
+    """Run a DCA simulation for window_years starting in January of start_year."""
+    n_months = window_years * 12
+    monthly_investment = total_aum / n_months
     result = WindowResult(start_year=start_year, monthly_investment=monthly_investment)
 
     total_shares = 0.0
     total_invested = 0.0
 
-    for year, month in _generate_month_sequence(start_year, n=24):
+    for year, month in _generate_month_sequence(start_year, n=n_months):
         # Buy at open on first trading day
         _, open_price = get_first_trading_day_open(df, year, month)
         total_shares += monthly_investment / open_price
@@ -149,12 +150,13 @@ def run_all_simulations(
     start_year: int,
     end_year: int,
     total_aum: float,
+    window_years: int = 2,
 ) -> List[WindowResult]:
     """Simulate all windows from start_year up to (but not including) end_year."""
     results = []
     for window_start in range(start_year, end_year):
         try:
-            result = simulate_window(df, window_start, total_aum)
+            result = simulate_window(df, window_start, total_aum, window_years)
             results.append(result)
         except ValueError as exc:
             print(f"Warning: skipping window {window_start}: {exc}")
@@ -169,7 +171,7 @@ def aggregate_results(results: List[WindowResult]) -> dict:
     """Aggregate per-month statistics across all windows."""
     import statistics
 
-    n_months = 24
+    n_months = len(results[0].portfolio_values)
     months = list(range(1, n_months + 1))
 
     pct_min, pct_max, pct_median = [], [], []
