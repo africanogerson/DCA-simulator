@@ -10,7 +10,7 @@ from simulation import (
 
 st.set_page_config(page_title="DCA SPY Simulator", layout="wide")
 st.title("DCA SPY Simulator")
-st.caption("Dollar Cost Averaging on SPY across sliding windows")
+st.caption("Simulate a Dollar Cost Averaging strategy on SPY and compare it against a fixed income return")
 
 # ---------------------------------------------------------------------------
 # Sidebar inputs
@@ -42,11 +42,19 @@ with st.sidebar:
     )
 
     window_years = st.number_input(
-        "Window Size (years)",
+        "Investment Period (years)",
         min_value=1,
         max_value=10,
         value=2,
         step=1,
+    )
+
+    annual_rate_pct = st.number_input(
+        "Fixed Income Annual Rate (%)",
+        min_value=0.1,
+        max_value=30.0,
+        value=5.0,
+        step=0.1,
     )
 
     if end_year <= start_year:
@@ -57,7 +65,7 @@ with st.sidebar:
     n_windows = int(end_year) - int(start_year)
     monthly_installment = total_aum / n_months
     st.info(
-        f"**{n_windows} window{'s' if n_windows != 1 else ''}** · "
+        f"**{n_windows} investment periods of {'s' if n_windows != 1 else ''}** · "
         f"**{n_months} months** | "
         f"Monthly installment: **${monthly_installment:,.0f}**"
     )
@@ -122,7 +130,7 @@ fig1.add_hline(
     annotation_position="bottom right",
 )
 fig1.update_layout(
-    title="Portfolio % Variation vs. Invested Capital",
+    title="Portfolio % Variation vs. time (months)",
     xaxis_title="Month",
     yaxis_title="Return (%)",
     hovermode="x unified",
@@ -195,20 +203,84 @@ fig3.add_hline(
     line_width=2.5,
     line_color="black",
 )
+_y_min = min(final_returns)
+_y_max = max(final_returns)
+_y_range = _y_max - _y_min
+
 fig3.update_layout(
-    title=f"Final {n_months}-Month Return by Window Start Year",
+    title=f"Final {n_months}-Month Return by invesment Start Year",
     xaxis=dict(title="Start Year", tickmode="linear", dtick=1),
-    yaxis_title=f"Return at Month {n_months} (%)",
+    yaxis=dict(
+        title=f"Return at Month {n_months} (%)",
+        range=[_y_min - _y_range * 0.1, _y_max + _y_range * 0.2],
+    ),
     hovermode="x",
 )
 
 # ---------------------------------------------------------------------------
 # Render
 # ---------------------------------------------------------------------------
-st.plotly_chart(fig1, use_container_width=True)
-st.plotly_chart(fig2, use_container_width=True)
+
+# --- Chart 3: Final return by start year ---
+st.divider()
 st.plotly_chart(fig3, use_container_width=True)
 
+# --- Fixed Income Comparison ---
+st.divider()
+st.subheader("Fixed Income Comparison")
+
+# Effective monthly rate: (1 + annual)^(1/12) - 1
+# Ensures compounding monthly for 12 months yields exactly the annual rate.
+r_monthly = (1 + annual_rate_pct / 100) ** (1 / 12) - 1
+
+# Future value of an ordinary annuity:  FV = C × [(1 + r)^n − 1] / r
+# Return % is independent of C (investment amount cancels out).
+fi_fv_ratio = ((1 + r_monthly) ** n_months - 1) / r_monthly  # FV / C
+fi_total_ratio = n_months  # total invested / C
+fi_return_pct = (fi_fv_ratio - fi_total_ratio) / fi_total_ratio * 100
+
+dca_median_final = agg["pct_median"][-1]
+
+col1, col2 = st.columns(2)
+col1.metric(
+    f"Fixed Income return ({window_years}yr @ {annual_rate_pct:.1f}%/yr)",
+    f"{fi_return_pct:.2f}%",
+)
+col2.metric(
+    "DCA median return (same period)",
+    f"{dca_median_final:.2f}%",
+    delta=f"{dca_median_final - fi_return_pct:+.2f}% vs fixed income",
+)
+
+
+st.caption(
+    f"Fixed income assumes equal monthly contributions over {n_months} months, "
+    f"compounded at an effective monthly rate of {r_monthly * 100:.4f}% "
+    f"(≡ {annual_rate_pct:.1f}%/yr). "
+    f"The percentage is the same regardless of the amount invested or the start year."
+)
+
+# --- Chart 1: % Variation Band ---
+st.divider()
+st.plotly_chart(fig1, use_container_width=True)
+st.markdown(
+    "The **volatility band** is built by running one independent DCA window per starting year "
+    "and tracking the portfolio's percentage gain or loss against invested capital at each month. "
+    "The shaded area spans the worst and best outcomes across all windows; the line is the median, "
+    "giving a sense of the typical trajectory regardless of when you started investing."
+)
+
+# --- Chart 2: Dollar Value Band ---
+st.divider()
+st.plotly_chart(fig2, use_container_width=True)
+st.markdown(
+    "The **dollar value band** shows the same windows in absolute terms: the dashed line is the "
+    "capital being deployed month by month, while the shaded area represents the range of portfolio "
+    "values across all start years. When the band sits above the dashed line the strategy is in profit; "
+    "the spread between min and max reflects how much the entry year affects the final outcome."
+)
+
+st.divider()
 with st.expander("Raw simulation data"):
     rows = []
     for r in results:
