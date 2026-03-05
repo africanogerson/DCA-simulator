@@ -16,6 +16,13 @@ st.caption("Simulate a Dollar Cost Averaging strategy on S&P 500 ETF (SPY) and c
 # Sidebar inputs
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    with st.expander("What is DCA?"):
+        st.markdown(
+            "**Dollar Cost Averaging (DCA)** is an investment strategy where you invest "
+            "a fixed amount at regular intervals (e.g. monthly), regardless of the asset's price. "
+            "This reduces the impact of volatility by buying more shares when prices are low "
+            "and fewer when prices are high."
+        )
     st.header("Parameters")
 
     total_aum = st.number_input(
