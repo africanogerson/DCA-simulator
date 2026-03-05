@@ -28,7 +28,7 @@ with st.sidebar:
     start_year = st.number_input(
         "Start Year",
         min_value=1993,
-        max_value=2023,
+        max_value=2024,
         value=2010,
         step=1,
     )
@@ -37,7 +37,7 @@ with st.sidebar:
         "End Year",
         min_value=int(start_year) + 1,
         max_value=2025,
-        value=max(int(start_year) + 1, 2020),
+        value=max(int(start_year) + 1, 2025),
         step=1,
     )
 
@@ -45,7 +45,7 @@ with st.sidebar:
         "Investment Period (years)",
         min_value=1,
         max_value=10,
-        value=2,
+        value=5,
         step=1,
     )
 
@@ -208,10 +208,10 @@ _y_max = max(final_returns)
 _y_range = _y_max - _y_min
 
 fig3.update_layout(
-    title=f"Final {n_months}-Month Return by invesment Start Year",
+    title=f"Final return after {window_years} years of continuous monthly investing by starting year",
     xaxis=dict(title="Start Year", tickmode="linear", dtick=1),
     yaxis=dict(
-        title=f"Return at Month {n_months} (%)",
+        title=f"Return after {window_years} years (%)",
         range=[_y_min - _y_range * 0.1, _y_max + _y_range * 0.2],
     ),
     hovermode="x",
