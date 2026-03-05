@@ -8,9 +8,9 @@ from simulation import (
     run_all_simulations,
 )
 
-st.set_page_config(page_title="DCA SPY Simulator", layout="wide")
-st.title("DCA SPY Simulator")
-st.caption("Simulate a Dollar Cost Averaging strategy on SPY and compare it against a fixed income return")
+st.set_page_config(page_title="DCA S&P 500 Simulator", layout="wide")
+st.title("DCA S&P 500 Simulator")
+st.caption("Simulate a Dollar Cost Averaging strategy on S&P 500 ETF (SPY) and compare it against a fixed income return")
 
 # ---------------------------------------------------------------------------
 # Sidebar inputs
