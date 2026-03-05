@@ -208,7 +208,7 @@ _y_max = max(final_returns)
 _y_range = _y_max - _y_min
 
 fig3.update_layout(
-    title=f"Final return after {window_years} years of continuous monthly investing by starting year",
+    title=f"Final return after {window_years} years of continuous monthly investments by starting year",
     xaxis=dict(title="Start Year", tickmode="linear", dtick=1),
     yaxis=dict(
         title=f"Return after {window_years} years (%)",
