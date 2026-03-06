@@ -2,15 +2,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from simulation import (
-    aggregate_results,
-    download_spy_data,
-    run_all_simulations,
-)
+from data_cache import get_or_fetch
+from simulation import aggregate_results, run_all_simulations
+from ticker_config import DEFAULT_START_YEAR, TICKERS
 
-st.set_page_config(page_title="DCA S&P 500 Simulator", layout="wide")
-st.title("DCA S&P 500 Simulator")
-st.caption("Simulate a Dollar Cost Averaging strategy on S&P 500 ETF (SPY) and compare it against a fixed income return")
+st.set_page_config(page_title="DCA Simulator", layout="wide")
 
 # ---------------------------------------------------------------------------
 # Sidebar inputs
@@ -25,6 +21,12 @@ with st.sidebar:
         )
     st.header("Parameters")
 
+    ticker_key = st.selectbox(
+        "Asset",
+        options=list(TICKERS.keys()),
+        format_func=lambda k: TICKERS[k]["name"],
+    )
+
     total_aum = st.number_input(
         "Total Investment ($)",
         min_value=1_000,
@@ -32,11 +34,14 @@ with st.sidebar:
         step=1_000,
     )
 
+    _ticker_min_year = TICKERS[ticker_key]["min_year"]
+    _ticker_default_start = DEFAULT_START_YEAR[ticker_key]
+
     start_year = st.number_input(
         "Start Year",
-        min_value=1993,
+        min_value=_ticker_min_year,
         max_value=2024,
-        value=2010,
+        value=max(_ticker_default_start, _ticker_min_year),
         step=1,
     )
 
@@ -78,16 +83,20 @@ with st.sidebar:
     )
 
 
+_ticker_name = TICKERS[ticker_key]["name"]
+st.title(f"DCA {_ticker_name} Simulator")
+st.caption(f"Simulate a Dollar Cost Averaging strategy on {_ticker_name} and compare it against a fixed income return")
+
 # ---------------------------------------------------------------------------
-# Data fetch (cached by year range — AUM change does not re-download)
+# Data fetch (cached by ticker + year range — AUM change does not re-download)
 # ---------------------------------------------------------------------------
 
-@st.cache_data(show_spinner="Downloading SPY data...")
-def fetch_data(sy: int, ey: int, wy: int) -> pd.DataFrame:
-    return download_spy_data(sy, ey, wy)
+@st.cache_data(show_spinner=f"Loading {TICKERS[ticker_key]['name']} data...")
+def fetch_data(ticker: str, sy: int, ey: int, wy: int) -> pd.DataFrame:
+    return get_or_fetch(ticker, sy, ey, wy)
 
 
-df = fetch_data(int(start_year), int(end_year), int(window_years))
+df = fetch_data(ticker_key, int(start_year), int(end_year), int(window_years))
 
 # ---------------------------------------------------------------------------
 # Simulation
@@ -215,7 +224,7 @@ _y_max = max(final_returns)
 _y_range = _y_max - _y_min
 
 fig3.update_layout(
-    title=f"Final return after {window_years} years of continuous monthly investments by starting year",
+    title=f"Final return after {window_years} years of continuous monthly {_ticker_name} investments by starting year",
     xaxis=dict(title="Start Year", tickmode="linear", dtick=1),
     yaxis=dict(
         title=f"Return after {window_years} years (%)",
