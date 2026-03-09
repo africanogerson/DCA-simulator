@@ -11,14 +11,14 @@ import yfinance as yf
 # Data download
 # ---------------------------------------------------------------------------
 
-def download_spy_data(start_year: int, end_year: int, window_years: int = 2) -> pd.DataFrame:
-    """Download SPY OHLCV data for the given year range.
+def download_ticker_data(ticker: str, start_year: int, end_year: int, window_years: int = 2) -> pd.DataFrame:
+    """Download OHLCV data for the given ticker and year range.
 
     The end date is set to Dec 31 of end_year+window_years so that the last
     window starting in end_year-1 has data for its final month.
     """
     df: pd.DataFrame = yf.download(
-        "SPY",
+        ticker,
         start=f"{start_year}-01-01",
         end=f"{end_year + window_years}-12-31",
         multi_level_index=False,
