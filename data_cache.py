@@ -104,6 +104,14 @@ def get_or_fetch(ticker: str, start_year: int, end_year: int, window_years: int)
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
+        # Normalize index: newer yfinance versions may return RangeIndex with Date column
+        if not isinstance(df.index, pd.DatetimeIndex):
+            if "Date" in df.columns:
+                df["Date"] = pd.to_datetime(df["Date"])
+                df.set_index("Date", inplace=True)
+            else:
+                df.index = pd.to_datetime(df.index)
+
         _upsert(conn, ticker, df)
         return _read_cached(conn, ticker, filter_start, filter_end)
     finally:
